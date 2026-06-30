@@ -11,7 +11,8 @@ namespace LearningBasics.Services
     public class UserService(
         AppDbContext context, 
         IUserRepository userRepository,
-        IValidator<CreateUserRequest> createUserValidator):IUserService
+        IValidator<CreateUserRequest> createUserValidator,
+        ILogger<UserService> logger):IUserService
     {
        
         public async Task<IEnumerable<GetUserResponse>> GetUsersAsync()
@@ -25,7 +26,10 @@ namespace LearningBasics.Services
             //    DateOfBirth = m.DateOfBirth
             //}).ToListAsync();
 
+            userRepository = null;
             var result = await userRepository.GetAllUsers();
+
+
             return result.Select(m => new GetUserResponse
             {
                 FirstName = m.FirstName,

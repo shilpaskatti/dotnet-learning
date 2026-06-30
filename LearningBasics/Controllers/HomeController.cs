@@ -8,11 +8,12 @@ namespace LearningBasics.Controllers
 {
     [Route("[controller]")]
     [ApiController]
-    public class HomeController(IUserService userService) : ControllerBase
+    public class HomeController(IUserService userService,ILogger<HomeController> _logger) : ControllerBase
     {
         [HttpGet("users")]
         public async Task<ActionResult<IEnumerable<GetUserResponse>>> GetUsers()
         {
+            userService = null;
             return Ok(await userService.GetUsersAsync());
         }
 

@@ -11,22 +11,23 @@ namespace LearningBasics.Middlewares
             Exception exception, 
             CancellationToken cancellationToken)
         {
-            logger.LogError(exception, $"An unhandled exception occurred while processing the request. TraceId: {httpContext.TraceIdentifier}");
+            //logger.LogError(exception, $"An unhandled exception occurred while processing the request. TraceId: {httpContext.TraceIdentifier}");
             var (statusCode, title) = GetStatusCode(exception);
+            var errorDetails = string.Concat(exception.Message, exception.StackTrace);
             var problemDetails = exception switch
             {
                 ValidationErrorException validationError => new HttpValidationProblemDetails(validationError.errors)
                 {
                     Title = title,
                     Status = statusCode,
-                    Detail = exception.StackTrace,
+                    Detail = errorDetails,
                     Instance = httpContext.Request.Path
                 },
                 _ => new ProblemDetails
                 {
                     Title = title,
                     Status = statusCode,
-                    Detail = exception.StackTrace,
+                    Detail = errorDetails,
                     Instance = httpContext.Request.Path
                 }
             };

@@ -1,6 +1,5 @@
 ﻿using LearningBasics.Exceptions;
 using Microsoft.AspNetCore.Mvc;
-using System.Net.NetworkInformation;
 
 namespace LearningBasics.Middlewares
 {
@@ -9,7 +8,7 @@ namespace LearningBasics.Middlewares
         public async Task InvokeAsync(HttpContext context)
         {
 
-            logger.LogInformation($"Processing request {context.Request.Method} {context.Request.Path}");
+            //logger.LogInformation($"Processing request {context.Request.Method} {context.Request.Path}");
 
             try
             {
@@ -18,7 +17,7 @@ namespace LearningBasics.Middlewares
             catch (Exception ex)
             {
                 context.Response.ContentType = "application/json";
-                context.Response.StatusCode = ex switch
+                var statusCode = ex switch
                 {
                     AppException appEx => (int)appEx.StatusCode,
                     ArgumentNullException => StatusCodes.Status400BadRequest,
@@ -26,14 +25,29 @@ namespace LearningBasics.Middlewares
                     _ => StatusCodes.Status500InternalServerError
                 };
 
+                context.Response.StatusCode = statusCode;
+                
                 var problemDetails = new ProblemDetails
                 {
-                    Title = "An unexpected error occurred.",
-                    Status = context.Response.StatusCode,
+                    Status = statusCode,
                     Instance = context.Request.Path,
-                    Detail = ex.StackTrace
+                    Title = statusCode switch
+                    {
+                        StatusCodes.Status400BadRequest => "Bad request.",
+                        StatusCodes.Status404NotFound => "Resource not found.",
+                        StatusCodes.Status409Conflict => "Conflict.",
+                        _ => "An unexpected error occurred."
+                    },
+                    Detail = ex switch
+                    {
+                        ValidationErrorException => "One or more validation errors occurred.",
+                        AppException appEx => appEx.Message,
+                        ArgumentException => ex.Message,
+                        _ => "An unexpected error occurred. Please try again later."
+                    }
                 };
 
+                problemDetails.Extensions["correlationId"] = context.Response.Headers["CorrelationId"];
                 problemDetails.Extensions["traceId"] = context.TraceIdentifier;
                 problemDetails.Extensions["timeStamp"] = DateTime.UtcNow;
                 problemDetails.Extensions["errors"] = ex switch
@@ -42,11 +56,9 @@ namespace LearningBasics.Middlewares
                     _ => null
                 };
 
+                //logger.LogError(ex, $"An unhandled exception occurred while processing the request. TraceId: {context.TraceIdentifier}");
                 await context.Response.WriteAsJsonAsync(problemDetails);
             }
-
-
         }
-
     }
 }
